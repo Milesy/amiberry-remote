@@ -1,0 +1,40 @@
+schema: spec-driven
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+context: |
+  A Python 3 library and command-line tool that drives Amiberry (the
+  Amiga emulator, Linux, the 8.4.2 AppImage in ~/amiga/emu/) through its
+  remote-control socket, so Amiga projects can check their programs in the
+  emulator without a person at the keyboard. Shared by several Amiga
+  projects in ~/source/amiga (first octamed4, later amiga-engine); nothing
+  in it may be specific to one of them. Each project keeps its own Amiberry
+  config and its own checks.
+  The emulated machines are A1200s running Kickstart/Workbench 3.1.
+  The tool never changes a project's Amiberry config files.
+  Unit tests must run without Amiberry (a fake socket server); checks
+  against a running Amiberry are opt-in.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
