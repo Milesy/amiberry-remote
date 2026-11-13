@@ -31,18 +31,23 @@ give its base address and version. A name not in the list SHALL be an error nami
 - **THEN** the result is its base address and version 40
 
 ### Requirement: Find a running program's hunks
-Given the name of a program started from a Shell, the tool SHALL find it while it runs and give the
-address and length of each of its hunks, in the order of its hunk file, so a project can turn
-"hunk n + offset" into an address. If the program is not running, or more than one Shell is
-running it, it SHALL stop with an error saying so.
+Given the name of a program started from a Shell, or the path of its hunk file on the PC, the tool
+SHALL find it while it runs and give the address and length of each of its hunks, numbered as in
+its hunk file, so a project can turn "hunk n + offset" into an address. A hunk the program has
+unloaded SHALL be given as not loaded. If the program is not running, or more than one copy is
+running, it SHALL stop with an error saying so.
 
 #### Scenario: Patched OctaMED
-- **WHEN** the hunks of `OctaMED.patched` are asked for while it runs
-- **THEN** the result has one entry per hunk of `OctaMED.patched`, each with the address where it was loaded and its length
+- **WHEN** the hunks of `OctaMED.patched` are asked for by its hunk file while it runs
+- **THEN** the result has one entry per hunk of `OctaMED.patched`: hunk 0 (its start-up, unloaded when it detaches) as not loaded, and every other hunk with the address where it was loaded and its length
+
+#### Scenario: Shell command by name
+- **WHEN** the hunks of `wait` are asked for while `wait 60` runs in a Shell
+- **THEN** the result is its one hunk, with its address and length
 
 #### Scenario: Not running
 - **WHEN** the hunks of a program that isn't running are asked for
-- **THEN** it stops with an error saying no Shell is running it
+- **THEN** it stops with an error saying it isn't running
 
 ### Requirement: Front screen
 The tool SHALL give the front screen's position, width, height and title, read from Intuition.

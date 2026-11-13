@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.egg-info/
+build/
+dist/
+# screenshots and difference pictures saved by checks
+amiberry-shots/

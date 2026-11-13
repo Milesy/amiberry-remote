@@ -44,7 +44,7 @@ amiga = Amiga.start("~/Amiberry/Configurations/A1200-OctaMED.uae")   # or Amiga.
 amiga.run("cd PC:OctaMED", "OctaMED.patched")
 amiga.key("Help"); amiga.click(330, 48)
 amiga.wait_for((0, 0), "expected/title.png", timeout=20)
-base = amiga.hunks("OctaMED.patched")[43].address
+base = amiga.hunks("~/amiga/local-octamed/OctaMED/OctaMED.patched")[43].address
 ```
 
 Checks are plain Python scripts in each project; the tool has no test runner of its own.
@@ -59,43 +59,72 @@ Each command opens the socket, sends one line, reads one line, closes, as amiga-
 reliable there. The socket path is `AMIBERRY_SOCKET` if set, else `$XDG_RUNTIME_DIR/amiberry.sock`.
 A reply not starting `OK` raises `AmiberryError` with the command and the reply.
 
-Block reads use `READ_MEM` 4 bytes at a time. Task 1.1 measures how long a command takes; if a
-1,040-byte read is slower than half a second, `MONITOR` with the debugger's memory dump is tried,
-and used for blocks if it doesn't stop the emulated CPU.
+Block reads use `READ_MEM` 4 bytes at a time (and 1 or 2 for an odd end). Task 1.1 measured a
+command at 0.1 ms, so a 1,040-byte block takes about 30 ms; `MONITOR` has no memory dump and isn't
+used (NOTES.md).
 
 ### 3. Reading the Amiga: exec and Intuition structures
 
 All "where is it" questions are answered from the OS's own structures, read with `READ_MEM`
-(offsets from the 3.1 includes; task 1.1 confirms each on a running Workbench):
+(offsets from the 3.1 includes, each confirmed on a running Workbench in task 1.1, NOTES.md):
 
 | What | How |
 |---|---|
-| Libraries | ExecBase = long at 4; `LibList` at `$17A`; each node: next 0, name pointer `$0A`, version `$14`. |
-| Tasks | `ThisTask` `$114`, lists `TaskReady` `$196`, `TaskWait` `$1A4`; type `$08` (13 = process). |
-| A Shell's program | process `pr_CLI` `$AC` (BPTR) -> `cli_CommandName` `$10` (BSTR), `cli_Module` `$3C` (BPTR seglist). |
-| A detached program | process name = program name, `pr_SegList` `$80` -> array, seglist in entry 3. |
+| Libraries | ExecBase = long at 4, valid when `ChkBase` `$26` = its complement (during reset the long at 4 is the ROM's start address); `LibList` at `$17A`; each node: next 0, name pointer `$0A`, version `$14`. |
+| Tasks | `ThisTask` `$114`, lists `TaskReady` `$196`, `TaskWait` `$1A4`; type `$08` (13 = process). A list walk over the socket isn't atomic, so tasks are de-duplicated by address and a walk stops after 1,000 nodes. |
+| A Shell's program | process `pr_CLI` `$AC` (BPTR) -> `cli_CommandName` `$10` (BSTR, as typed, maybe with a path), `cli_Module` `$3C` (BPTR seglist). |
+| A detached program | its own process (named by the program, not after its file: `OctaMED.patched` runs as `OctaMED`), `pr_SegList` `$80` -> array, seglist in entry 3 (whatever entry 0's count says). A detaching start-up unloads the program's first hunk(s): OctaMED's seglist is hunks 1-44 of its 45. |
 | Hunks | seglist BPTR chain: segment at `4 * bptr`, next BPTR at +0, contents from +4, size long at -4 (contents + 8). |
-| Front screen | IntuitionBase `FirstScreen` `$3C`; Screen `LeftEdge` 8, `TopEdge` 10, `Width` 12, `Height` 14, `MouseY` 16, `MouseX` 18, `Title` 22, `BitMap` 184 (`BytesPerRow` 0, `Rows` 2, `Depth` 5, planes from 8). |
+| Front screen | IntuitionBase `FirstScreen` `$3C`; Screen `LeftEdge` 8, `TopEdge` 10, `Width` 12, `Height` 14, `MouseY` 16, `MouseX` 18, `Flags` 20, `Title` 22, `BitMap` 184 (`BytesPerRow` 0, `Rows` 2, `Depth` 5, planes from 8). Bitmaps may be interleaved (Workbench's: `BytesPerRow` 320 for 640 x 4 planes); row r of plane p is at `Planes[p] + r * BytesPerRow` either way. |
 | Active window | IntuitionBase `ActiveWindow` `$34`; Window `Title` 32, `WScreen` 46. |
 
+Hunks are asked for by name or by hunk file:
+
+- **A name** (e.g. `wait`, `OctaMED`): a Shell process whose `cli_Module` is set and whose
+  command's file part (after the last `:` or `/`) is the name, or a process with that name
+  (`pr_SegList` entry 3), case ignored. The hunks are numbered in seglist order from 0.
+- **A hunk file on the PC** (the argument names a file that exists): the tool reads the file's
+  hunk header and looks at every process's `cli_Module` and `pr_SegList` entry 3 (each seglist
+  once) for one whose segment lengths equal the file's hunk sizes, or the sizes of all but its
+  first hunks (a detaching start-up). Hunks keep the file's numbers; those not loaded are given
+  with their length and no address. This is how detached programs such as `OctaMED.patched` are
+  found, whatever their process is called.
+
+None found is an error saying the program isn't running (by name, it adds that a program that
+detaches is found by its hunk file); two is an error saying it runs twice.
+
 *Alternative for hunks:* the project searches memory for a marker in its own code. Rejected as the
-general way: slow over `READ_MEM`, and every project would need a marker.
+general way: slower over `READ_MEM`, and every project would need a marker.
 
 ### 4. Waiting for Workbench
 
-After `start`, poll (every half second): the socket answers; ExecBase is set; `intuition.library`
-is in the list; a process called `Workbench` exists; the front screen is the Workbench screen
-(screen flag `WBENCHSCREEN`); and then two screenshots one second apart are the same (disk
-activity and icons have settled). Each step that fails just waits; the time limit covers the lot.
+After `start`, poll (every half second): the socket answers; ExecBase is set (`ChkBase`);
+`intuition.library` is in the list; a process called `Workbench` exists; the front screen is the
+Workbench screen (screen type `WBENCHSCREEN`, flags & `$F` = 1); and then two screenshots one second
+apart are the same (disk activity and icons have settled). Each step that fails just waits; the time
+limit covers the lot. On the OctaMED config this took 11.3 s (NOTES.md), well inside the 90 s
+default.
 
 ### 5. Shell commands
 
-Right Amiga+E is Workbench's Execute Command; it needs a Workbench window active, so the pointer is
-first put on an empty spot of the Workbench screen's title bar and clicked. Then `newshell` is
-typed into the requester. The new window must become `ActiveWindow` (a different window from
-before, on the Workbench screen); if not within 3 seconds, the tool clicks inside it. Then each
-command is typed with Return. `run` returns once the keys are sent: the caller waits for the
-screen or memory state it expects, as only it knows what that is.
+Right Amiga+E is Workbench's Execute Command; it needs a Workbench window active. If the active
+window isn't one of Workbench's (Window `Flags` has `WFLG_WBENCHWINDOW`, `$02000000`), the tool
+clicks one: the backdrop window if there is one (`WFLG_BACKDROP`), on a spot no other window
+covers (the layers in front of its layer, Window `WLayer` 124, Layer `front` 0 and bounds 16-22),
+as near its middle as can be. (First planned: an empty spot of the screen's title bar. Seen in
+task 6.1: a Shell window can cover the whole title bar, and a click on the title bar doesn't change
+the active window anyway. Workbench's windows can't be found by their `UserPort`'s task either:
+ClassicWB's ToolsDaemon owns the backdrop window's port.)
+
+The requester keeps the last command it ran, so Right Amiga+X clears its string gadget before
+`newshell` is typed (seen: without it, `newshellnewshell` failed and its Output Window became the
+active window). The new window must become `ActiveWindow`: a window on the Workbench screen other
+than the one active before and other than the requester (the window active before is active again
+for a moment between the two). If that doesn't happen within 3 seconds, the tool clicks inside the
+newest window on the Workbench screen. Before each command is typed (with Return) the Shell window
+is checked to still have the keyboard. `run` returns once the keys are sent: the caller waits for
+the screen or memory state it expects, as only it knows what that is. Workbench's screen must be
+in front; if it isn't, `run` stops with an error saying which screen is.
 
 ### 6. Keys and typing
 
@@ -108,24 +137,34 @@ regard to case.
 
 `SEND_MOUSE` moves are relative and Workbench's input preferences may accelerate them. So the
 pointer is steered: read the front screen's `MouseX`/`MouseY`, send a move, read again, and learn
-the ratio of pixels moved to counts sent on each axis from that move. Moves are at most 8 counts
-per event (small enough not to be accelerated), the next move aims at the remaining distance, and
-it stops when the position is exact, giving up after 200 moves. Buttons are bit 0 (left) and
-bit 1 (right) of `SEND_MOUSE`'s third value, sent with a zero move; a drag sends its moves with
+the ratio of pixels moved to counts sent on each axis from that move. (Seen: 1 pixel per count
+across and half a pixel down on 640 x 256 screens, as Intuition counts interlaced lines.) A move
+shows about 40 ms after `SEND_MOUSE` answers, so after each move the position is read until it
+changes, for up to 200 ms; no change means the move was too small to show. Moves are at most 32
+counts per event, the next move aims at the remaining distance (so the last moves are small, too
+small to be sped up), and it stops when the position is exact, giving up after 200 moves or 10 in
+a row that don't show. (8 counts at most, as first planned, took about 2 s per position on a
+640 x 256 screen, where a count moves the pointer only half a line down; 32 takes 0.5-1.2 s.)
+Buttons are bit 0 (left) and bit 1 (right) of `SEND_MOUSE`'s third value, sent with a zero move; a drag sends its moves with
 the left bit set, one pixel-step of the line at a time, then releases. A `try`/`finally` releases
 the buttons whatever happens.
 
 ### 8. Screenshots in Amiga pixels
 
 Amiberry's screenshot is the emulator's window: the display with its border, lores pixels
-doubled, non-interlaced lines doubled. The mapping (scale per axis and offset) is found once per
+doubled, non-interlaced lines doubled (seen: 756 x 576, Workbench's and OctaMED's 640 x 256 screens
+at x 76, y 38, lines doubled). The mapping (scale per axis and offset) is found once per
 front screen (keyed by its address, size and depth) and kept for the session:
 
-1. Read a band of the screen's bitmap from memory (8 rows with more than one colour, found by
-   reading rows from the top), giving each pixel's colour number.
+1. Read a band of the screen's bitmap from memory (8 rows in a row, each with more than one
+   colour, found by reading rows from the top), giving each pixel's colour number.
 2. Try horizontal scales 1, 2, 4 and vertical scales 1, 2, with offsets in a search window, and
-   keep the one where the screenshot's colour is a function of the colour number across the band
-   (same number, same colour; different numbers mostly different colours).
+   keep the one where, on each line, the screenshot's colour is a function of the colour number
+   across the band (same number, same colour, over the whole block of scaled pixels; not all one
+   colour). Per line, because the copper may change colours between lines: ClassicWB's backdrop
+   gradient changes colour 0 on every line (seen in task 6.1). Pixels near the pointer (a sprite)
+   are left out. Placements are narrowed with Pillow's whole-picture operations first, then
+   checked cell by cell. A band that fits in more than one place gives way to the next band down.
 3. No exact fit is an error naming the screen.
 
 Then a shot is cropped and scaled down to Amiga pixels. Comparisons reduce both sides to 4 bits
@@ -135,7 +174,8 @@ pointer outside the area unless told not to (bottom-right of the screen, or the 
 outside the area).
 
 *Alternative:* render the screen from its bitplanes and palette. Rejected for every shot: a whole
-screen is about 60 KB over `READ_MEM`, far too slow; it is used only for the small calibration band.
+screen is about 60 KB, some 15,000 `READ_MEM` commands (1.5 s), and gives the palette's colours
+rather than what Amiberry shows; it is used only for the small calibration band.
 
 ### 9. Tests against a fake Amiberry
 
@@ -148,9 +188,9 @@ command. Live tests run only when `AMIBERRY_LIVE_CONFIG` names a config.
 ## Risks / Trade-offs
 
 - [The screen's `MouseX`/`MouseY` aren't updated for a screen that isn't active] -> task 1.1
-  checks; if so, use IntuitionBase's `MouseX`/`MouseY` and the screen's position.
-- [Commands are answered once per frame, so 1 KB reads take seconds] -> measured in task 1.1;
-  blocks via `MONITOR` if it works; checks prefer few reads.
+  found them updated on the front screen, Workbench's and OctaMED's (NOTES.md).
+- [Commands are answered once per frame, so 1 KB reads take seconds] -> task 1.1 measured 0.1 ms
+  a command; a 1 KB block is about 30 ms.
 - [The real mouse over Amiberry's window moves the pointer] -> steering corrects as it goes; the
   README says to keep the PC mouse off the window during a run.
 - [Keys go to the wrong window] -> the Shell is checked to be the active window before typing.
@@ -160,5 +200,4 @@ command. Live tests run only when `AMIBERRY_LIVE_CONFIG` names a config.
 
 ## Open Questions
 
-- How long ClassicWB takes to settle on the OctaMED config; the default limit (90 s) may need to
-  change.
+- None left: ClassicWB settles in 11.3 s on the OctaMED config, so the 90 s default stays.
