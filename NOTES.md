@@ -140,3 +140,34 @@ By hand with the command line:
 - `click right` (held 50 ms) opened the menu and it stayed open (sticky); a left `click` on the item
   then picked it: the program received `$F820` (menu 0, item 1) at once.
 
+
+## Pausing (2026-11-05 to 11-18, engine machine, amiga-engine steps 3.1-4.3)
+
+Seen with `A1200-Engine.uae` while amiga-engine's game ran with its own copper list:
+
+- `PAUSE` and `RESUME` both answer `OK`; `GET_STATUS` answers `OK`, `Paused=false`, `Config=...`.
+- A key sent with `SEND_KEY` while paused is lost: the program never sees it.
+- `FRAME_ADVANCE` answers "1 frame(s) advanced" while paused, but runs no frame: the program's
+  frame counter (counted from the vertical blank) doesn't move.
+- `SCREENSHOT` works while paused. It shows the frame drawn about 2 frames before the state in
+  memory.
+- Amiberry answers the socket at one point in each frame, so a `PAUSE` sent between frames can
+  stop the program part-way through drawing one. Separate `READ_MEM`s while running aren't of
+  one frame; read again after pausing.
+- The game's display is lores, 320 wide: in the 756 x 576 screenshot its pixels are 2 x 2,
+  its top-left at x 76, y 94 (that game's display window starts lower than Workbench's).
+
+## Live check on the engine machine (2026-11-18)
+
+`AMIBERRY_LIVE_CONFIG=~/Amiberry/Configurations/A1200-Engine.uae .venv/bin/python -m unittest
+tests.live_check -v` (stock A1200, 2 MB chip, no fast RAM): all 4 checks pass, 19.5 s in all.
+
+| Step | Time |
+|---|---|
+| start Amiberry and wait for Workbench | 12.20 s |
+| pointer to x 0, y 0 / 639, 255 / 320, 128 / 13, 249 / 619, 17, each read back exact | 0.00 / 1.20 / 0.60 / 0.60 / 1.16 s |
+| first shot (finding the screen) / next shot | 0.14 / 0.04 s |
+| `run` `wait 60` in a new Shell / until its hunk (816 bytes, at `$89C40`) is found | 2.90 / 0.17 s |
+| paused: exec's `DispCount` the same twice 0.3 s apart; raw shot while paused | 0.02 s (raw shot) |
+| resumed: until `DispCount` moved | 0.07 s |
+| quit | 0.09 s |

@@ -52,6 +52,7 @@ class FakeAmiberry:
         self.shells = []            # Shell windows opened with newshell
         self.quit_delay = 0.0       # seconds between answering QUIT and the socket going
         self.execute_text = ""      # the command the Execute Command requester remembers
+        self.paused = False         # PAUSE until RESUME
 
     # ---- serving
 
@@ -140,6 +141,14 @@ class FakeAmiberry:
         return "OK\tPONG"
 
     def cmd_QUIT(self):
+        return "OK"
+
+    def cmd_PAUSE(self):
+        self.paused = True
+        return "OK"
+
+    def cmd_RESUME(self):
+        self.paused = False
         return "OK"
 
     def cmd_READ_MEM(self, addr, width):

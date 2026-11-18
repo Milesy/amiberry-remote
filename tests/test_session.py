@@ -202,6 +202,48 @@ class RunTest(unittest.TestCase):
         self.assertEqual(self.fake.commands("SEND_KEY"), [])
 
 
+class PauseTest(unittest.TestCase):
+    def setUp(self):
+        self.fake = FakeAmiberry().start()
+        self.addCleanup(self.fake.__exit__)
+        self.amiga = Amiga(Link(self.fake.path))
+
+    def test_pause_and_resume(self):
+        self.amiga.pause()
+        self.assertTrue(self.fake.paused)
+        self.amiga.resume()
+        self.assertFalse(self.fake.paused)
+        self.assertEqual(self.fake.commands(), ["PAUSE", "RESUME"])
+
+    def test_paused_block_resumes_whatever_happens(self):
+        with self.amiga.paused():
+            self.assertTrue(self.fake.paused)
+        self.assertFalse(self.fake.paused)
+        with self.assertRaises(KeyError):
+            with self.amiga.paused():
+                raise KeyError("in the block")
+        self.assertFalse(self.fake.paused)
+        self.assertEqual(self.fake.commands(), ["PAUSE", "RESUME", "PAUSE", "RESUME"])
+
+    def test_refused(self):
+        self.fake.replies["PAUSE"] = "ERROR\tbusy"
+        with self.assertRaises(AmiberryError) as e:
+            self.amiga.pause()
+        self.assertIn("PAUSE", str(e.exception))
+
+
+class RawShotTest(unittest.TestCase):
+    def test_amiberrys_own_screenshot(self):
+        with FakeAmiberry() as fake, tempfile.TemporaryDirectory() as d:
+            fake.boot_workbench()
+            amiga = Amiga(Link(fake.path))
+            path = os.path.join(d, "raw.png")
+            picture = amiga.raw_shot(path)
+            self.assertEqual(picture.size, (756, 576))
+            self.assertEqual(fake.shots, [path])
+            self.assertEqual(amiga.raw_shot().size, (756, 576))
+
+
 class QuitTest(unittest.TestCase):
     def test_waits_until_the_socket_is_gone(self):
         with FakeAmiberry() as fake:

@@ -3,8 +3,9 @@
     AMIBERRY_LIVE_CONFIG=~/Amiberry/Configurations/A1200-OctaMED.uae \\
         .venv/bin/python -m unittest tests.live_check -v
 
-It starts Amiberry with the config (or uses the one running) and quits it at the end. Keep the
-PC's mouse off Amiberry's window while it runs."""
+It starts Amiberry with the config (or uses the one running) and quits it at the end. The
+fourth check pauses the emulation for about half a second. Keep the PC's mouse off Amiberry's
+window while it runs."""
 import os
 import time
 import unittest
@@ -71,6 +72,22 @@ class LiveCheck(unittest.TestCase):
             self.assertIsNotNone(hunk.address)
             self.assertGreater(hunk.length, 0)
             print(f"\n  Wait: hunk {hunk.number} at ${hunk.address:X}, {hunk.length} bytes", end="")
+
+    def test_4_paused_memory_holds_still(self):
+        dispatches = self.amiga.read(4) + 0x11C      # exec's DispCount: task switches so far
+        screen = self.amiga.front_screen()
+        with self.amiga.paused():
+            first = self.amiga.read(dispatches)
+            time.sleep(0.3)
+            self.assertEqual(self.amiga.read(dispatches), first, "paused, the count moved")
+            picture = self.timed("raw shot while paused", self.amiga.raw_shot)
+            self.assertGreaterEqual(picture.width, screen.width)
+            self.assertGreaterEqual(picture.height, screen.height)
+        start = time.monotonic()
+        while self.amiga.read(dispatches) == first:
+            self.assertLess(time.monotonic() - start, 2, "resumed, the count didn't move")
+            time.sleep(0.05)
+        self.times.append(("until the count moved after resuming", time.monotonic() - start))
 
 
 if __name__ == "__main__":

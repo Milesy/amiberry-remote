@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import time
+from contextlib import contextmanager
 
 from PIL import ImageChops
 
@@ -257,6 +258,26 @@ class Amiga:
                 raise AmiberryError(f"Amiberry's process is still running {timeout:g} s after "
                                     "QUIT") from None
 
+    # ---- the emulation
+
+    def pause(self):
+        """Stop the emulation, so memory and the display hold still to be read and shot. Keys
+        sent while paused are lost."""
+        self.link.send("PAUSE")
+
+    def resume(self):
+        """Run the emulation again after `pause`."""
+        self.link.send("RESUME")
+
+    @contextmanager
+    def paused(self):
+        """Paused for a `with` block, and resumed after it whatever happens."""
+        self.pause()
+        try:
+            yield self
+        finally:
+            self.resume()
+
     # ---- keys
 
     def key(self, *keys):
@@ -302,6 +323,12 @@ class Amiga:
         """A picture (PIL image) of the front screen in its own pixels, saved at `path` if given;
         Amiberry's own screenshot is kept at `raw_path` if given."""
         return self.screenshots.shot(path, raw_path)
+
+    def raw_shot(self, path=None):
+        """Amiberry's own screenshot as a PIL image (756 x 576 here, border and all), saved at
+        `path` if given. For a display that isn't the front Intuition screen, such as a game
+        that has taken the display over, which `shot` can't show."""
+        return self.screenshots.raw(path)
 
     def compare(self, area, expected, bits=4, park=True):
         """Compare an area ((left, top) or (left, top, width, height)) of the front screen with an

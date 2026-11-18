@@ -81,6 +81,8 @@ $R peek '$4' l                # b, w, l, or a count of bytes to dump
 $R poke 0x40000 w 0x4E71
 $R library intuition.library
 $R hunks ~/amiga/local-octamed/OctaMED/OctaMED.patched
+$R rawshot <scratchpad>/raw.png   # Amiberry's own screenshot: for a game's own display
+$R pause                      # and resume: memory and display hold still
 $R send GET_FPS               # one raw socket line
 $R quit
 ```
@@ -137,6 +139,10 @@ A1200.
   the program first.
 - `type` only knows the US keymap. It refuses characters like `é` or `£`.
 - Pointer moves take 0.5-1.2 s and a drag about 60 ms per pixel. Allow for that in timeouts.
+- A game that takes the display over (amiga-engine's) isn't an Intuition screen: `shot` and
+  `compare` can't see it. Use `raw_shot` and crop it yourself.
+- To read several values of one moment, read them inside `with amiga.paused():`. Keys sent while
+  paused are lost.
 
 ## When the tool falls short
 

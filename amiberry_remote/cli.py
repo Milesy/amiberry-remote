@@ -64,6 +64,10 @@ def parser():
     add("shot", "save a screenshot of the front screen in Amiga pixels",
         ("path", dict(metavar="PATH")),
         ("--raw", dict(metavar="RAW", help="also keep Amiberry's own screenshot here")))
+    add("rawshot", "save Amiberry's own screenshot, border and all (a display that isn't an "
+        "Intuition screen, e.g. a game's)", ("path", dict(metavar="PATH")))
+    add("pause", "pause the emulation")
+    add("resume", "resume the emulation")
     add("peek", "print the byte (b), word (w) or long (l, the default) at an address, or COUNT bytes",
         ("address", dict(type=number)), ("size", dict(nargs="?", default="l", metavar="b|w|l|COUNT")))
     add("poke", "write a byte, word or long",
@@ -105,6 +109,13 @@ def run(args, out):
     elif c == "shot":
         picture = amiga.shot(args.path, args.raw)
         print(f"{picture.width} x {picture.height}", file=out)
+    elif c == "rawshot":
+        picture = amiga.raw_shot(args.path)
+        print(f"{picture.width} x {picture.height}", file=out)
+    elif c == "pause":
+        amiga.pause()
+    elif c == "resume":
+        amiga.resume()
     elif c == "peek":
         peek(amiga, args.address, args.size, out)
     elif c == "poke":

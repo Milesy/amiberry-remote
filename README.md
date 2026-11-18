@@ -138,6 +138,7 @@ result = amiga.compare((0, 0), "expected/title.png")          # area's size from
 result = amiga.compare((10, 20, 100, 40), "expected/box.png")
 result.differing, result.first, result.shot_path, result.diff_path
 amiga.wait_for((0, 0), "expected/title.png", timeout=20)
+raw = amiga.raw_shot("raw.png")               # Amiberry's own screenshot, border and all
 ```
 
 A shot is a picture of the front screen in its own pixels: one picture pixel per Amiga pixel, at
@@ -165,6 +166,24 @@ means waiting on.
 The pointer is a sprite and shows in screenshots, so `compare` and `wait_for` first move it out
 of the area if it may cover it: to the bottom-right corner, or the first of the bottom-left,
 top-right and top-left corners clear of the area. `park=False` leaves it where it is.
+
+`raw_shot` is Amiberry's own screenshot (756 x 576 here) as it is, saved at a path if given. It is
+for a display that isn't the front Intuition screen, such as a game that has taken the display
+over with its own copper list: `shot` finds the screen from Intuition's bitmap, so it can't show
+that. Where the game's picture sits in the raw screenshot is up to the caller.
+
+## Pausing
+
+```python
+amiga.pause(); value = amiga.read(address, 2); amiga.raw_shot("now.png"); amiga.resume()
+with amiga.paused():                     # resumed after the block, whatever happens
+    value = amiga.read(address, 2)
+```
+
+Paused, the emulation stops: memory and the display hold still, so several reads and a
+screenshot are all of one moment. Keys sent while paused are lost, and Amiberry's
+`FRAME_ADVANCE` doesn't run a frame while paused (see `NOTES.md`): to catch a moment, poll memory
+while running, then pause and read again to check it still holds.
 
 ## Memory
 
@@ -223,6 +242,8 @@ amiberry-remote click 330 48              # click 330 48 right
 amiberry-remote drag 100 120 160 120
 amiberry-remote drag 300 100 290 89 360 70 right --pause 0.3   # a menu pick
 amiberry-remote shot /tmp/now.png         # 640 x 256 (--raw PATH keeps Amiberry's own)
+amiberry-remote rawshot /tmp/raw.png      # 756 x 576: Amiberry's own, for a game's display
+amiberry-remote pause                     # and resume
 amiberry-remote peek '$4' l               # $00200830 (b, w, l, or a count of bytes to dump)
 amiberry-remote poke 0x40000 w 0x4E71
 amiberry-remote library intuition.library # $0020B3F4 version 40

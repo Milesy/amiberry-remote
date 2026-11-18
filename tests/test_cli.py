@@ -101,6 +101,18 @@ class CliTest(unittest.TestCase):
         with Image.open(path) as image:
             self.assertEqual(image.size, (640, 256))
 
+    def test_rawshot(self):
+        path = os.path.join(self.dir.name, "raw.png")
+        self.assertEqual(self.ok("rawshot", path), "756 x 576\n")
+        with Image.open(path) as image:
+            self.assertEqual(image.size, (756, 576))
+
+    def test_pause_and_resume(self):
+        self.assertEqual(self.ok("pause"), "")
+        self.assertTrue(self.fake.paused)
+        self.assertEqual(self.ok("resume"), "")
+        self.assertFalse(self.fake.paused)
+
     def test_run(self):
         self.ok("run", "cd PC:OctaMED", "OctaMED.patched")
         self.assertEqual(self.fake.shell_lines(), ["cd PC:OctaMED", "OctaMED.patched"])
