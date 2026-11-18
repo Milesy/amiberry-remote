@@ -88,6 +88,10 @@ class CliTest(unittest.TestCase):
         self.assertEqual(self.fake.button_events[-2][0], 2)
         self.ok("drag", "100", "120", "110", "120")
         self.assertEqual(self.fake.button_events[-2:], [(1, (100, 120)), (0, (110, 120))])
+        self.ok("drag", "10", "2", "10", "26", "right")
+        self.assertEqual(self.fake.button_events[-2:], [(2, (10, 2)), (0, (10, 26))])
+        self.ok("drag", "300", "100", "290", "89", "$154", "89", "360", "70", "right", "--pause", "0.01")
+        self.assertEqual(self.fake.button_events[-2:], [(2, (300, 100)), (0, (360, 70))])
 
     def test_shot(self):
         self.fake.show_pointer = False

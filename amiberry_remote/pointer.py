@@ -143,18 +143,27 @@ class Pointer:
         finally:
             self.release()
 
-    def drag(self, x1, y1, x2, y2):
-        """Hold the left button at x1, y1 and move along a straight line, a pixel at a time, to
-        x2, y2, then release it."""
+    def drag(self, *coords, button="left", pause=0.0):
+        """Hold a button ("left" or "right") at the first position and move a pixel at a time
+        along straight lines through each further position, then release it at the last one.
+        `coords` is x1, y1, x2, y2[, x3, y3 ...]. With the right button this picks a menu item:
+        go from where the menu opens to its title, then to the item, and let go there. `pause`
+        seconds are spent at each position between the first and the last: a menu needs a moment
+        on its title to show that title's items (MagicMenu, as on ClassicWB, measured 0.3 s)."""
+        bit = _button(button)
+        points = _points(coords)
         screen = self.memory.front_screen()
-        self._check(screen, x1, y1)
-        self._check(screen, x2, y2)
+        for x, y in points:
+            self._check(screen, x, y)
         try:
-            self._steer(screen, (x1, y1))
-            self._send(0, 0, LEFT)
+            self._steer(screen, points[0])
+            self._send(0, 0, bit)
             self.sleep(self.hold)
-            for point in line(x1, y1, x2, y2)[1:]:
-                self._steer(screen, point)
+            for n, (a, b) in enumerate(zip(points, points[1:])):
+                if n:
+                    self.sleep(pause)
+                for point in line(*a, *b)[1:]:
+                    self._steer(screen, point)
             self.sleep(self.hold)
             self._send(0, 0, 0)
             self.sleep(self.gap)
@@ -165,6 +174,12 @@ class Pointer:
         """Release the buttons if any are held."""
         if self.buttons:
             self._send(0, 0, 0)
+
+
+def _points(coords):
+    if len(coords) < 4 or len(coords) % 2:
+        raise AmiberryError(f"a drag needs pairs of x, y for at least two positions, not {list(coords)}")
+    return [(coords[i], coords[i + 1]) for i in range(0, len(coords), 2)]
 
 
 def _button(button):

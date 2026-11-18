@@ -95,6 +95,35 @@ class PointerTest(unittest.TestCase):
                 for point in line(x1, y1, x2, y2):
                     self.assertIn(point, seen, (screen, point))     # in order
 
+    def test_right_button_drag_holds_the_right_button(self):
+        self.fake.put_mouse(5, 5)
+        start, events = len(self.fake.mouse_track), len(self.fake.button_events)
+        self.pointer.drag(10, 2, 10, 30, button="right")
+        self.assertEqual(self.fake.button_events[events:], [(2, (10, 2)), (0, (10, 30))])
+        held = [pos for pos, b in self.fake.mouse_track[start:] if b == 2]
+        seen = iter(held)
+        for point in line(10, 2, 10, 30):
+            self.assertIn(point, seen, point)
+        with self.assertRaises(AmiberryError):
+            self.pointer.drag(10, 2, 10, 30, button="middle")
+
+    def test_drag_through_several_positions(self):
+        self.fake.put_mouse(5, 5)
+        start, events = len(self.fake.mouse_track), len(self.fake.button_events)
+        path = [(300, 100), (290, 89), (340, 89), (360, 70)]
+        self.pointer.drag(*[c for p in path for c in p], button="right")
+        self.assertEqual(self.fake.button_events[events:], [(2, (300, 100)), (0, (360, 70))])
+        seen = iter([pos for pos, b in self.fake.mouse_track[start:] if b == 2])
+        expected = [path[0]] + [q for a, b in zip(path, path[1:]) for q in line(*a, *b)[1:]]
+        for point in expected:
+            self.assertIn(point, seen, point)
+        before = self.pointer.clock()
+        self.pointer.drag(300, 100, 290, 89, 360, 70, button="right", pause=7)
+        self.assertGreaterEqual(self.pointer.clock() - before, 7)
+        for bad in ((1, 2, 3), (1, 2), (1, 2, 3, 4, 5)):
+            with self.assertRaises(AmiberryError):
+                self.pointer.drag(*bad)
+
     def test_buttons_released_when_a_step_fails(self):
         self.fake.put_mouse(100, 120)
         sends = []

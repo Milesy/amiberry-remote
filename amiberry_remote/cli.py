@@ -56,9 +56,11 @@ def parser():
     add("click", "click at a position of the front screen",
         ("x", dict(type=number)), ("y", dict(type=number)),
         ("button", dict(nargs="?", choices=["left", "right"], default="left")))
-    add("drag", "drag with the left button from one position to another",
-        ("x1", dict(type=number)), ("y1", dict(type=number)),
-        ("x2", dict(type=number)), ("y2", dict(type=number)))
+    add("drag", "drag with a button held through positions X1 Y1 X2 Y2 [X Y ...] [left|right]; "
+        "right picks a menu item",
+        ("points", dict(metavar="X Y", nargs="+")),
+        ("--pause", dict(type=float, default=0.0, metavar="SECONDS",
+                         help="wait this long at each position between the first and last")))
     add("shot", "save a screenshot of the front screen in Amiga pixels",
         ("path", dict(metavar="PATH")),
         ("--raw", dict(metavar="RAW", help="also keep Amiberry's own screenshot here")))
@@ -97,7 +99,9 @@ def run(args, out):
     elif c == "click":
         amiga.click(args.x, args.y, args.button)
     elif c == "drag":
-        amiga.drag(args.x1, args.y1, args.x2, args.y2)
+        points = list(args.points)
+        button = points.pop() if points[-1] in ("left", "right") else "left"
+        amiga.drag(*[number(p) for p in points], button=button, pause=args.pause)
     elif c == "shot":
         picture = amiga.shot(args.path, args.raw)
         print(f"{picture.width} x {picture.height}", file=out)

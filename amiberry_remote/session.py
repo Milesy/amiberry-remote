@@ -289,9 +289,12 @@ class Amiga:
         """Click the left or right button at x, y of the front screen."""
         self.mouse.click(x, y, button)
 
-    def drag(self, x1, y1, x2, y2):
-        """Drag with the left button held from x1, y1 to x2, y2, through every pixel between."""
-        self.mouse.drag(x1, y1, x2, y2)
+    def drag(self, *coords, button="left", pause=0.0):
+        """Drag with a button ("left" or "right") held from x1, y1 through each further x, y to
+        the last, passing every pixel between. A right-button drag from a menu title to an item
+        picks that item: drag(300, 100, 290, 89, 360, 70, button="right", pause=0.3). `pause`
+        seconds are spent at each position between the first and the last."""
+        self.mouse.drag(*coords, button=button, pause=pause)
 
     # ---- screen
 

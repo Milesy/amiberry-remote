@@ -126,3 +126,17 @@ By hand with the command line:
 | `click`, `key RAmiga-X`, `type` in OctaMED's Files panel: directory `PC:songs`, file `test2.mod`, LOAD SONG | "Loaded.", instrument 01 "amen break.8svx" | |
 | `key Help` | the title bar shows "15 slices" | 0.21 s |
 | `quit` | Amiberry has quit | 0.18 s |
+
+## Menus with MagicMenu (2026-11-18, OctaMED machine, SoundMon 2.2)
+
+- No menu at all while the program's window isn't active. IntuitionBase `ActiveWindow` (+52) was 0
+  after a Shell was used and the screens flipped back with Left-Amiga+M; a click on the program's
+  screen below its window (SoundMon's window is 640 x 210) didn't activate it, a click inside did.
+- MagicMenu pops the menu up at the pointer: the titles in a column, the open menu's items beside
+  it. It opens with the last-used menu, and that menu's last-highlighted item, level with the pointer.
+- Right button pressed, path through title and item (with 0.4 s pauses), released on the
+  highlighted item: the menu stayed drawn for over a second, then closed with code `$FFFF`
+  (MENUNULL), so nothing was picked.
+- `click right` (held 50 ms) opened the menu and it stayed open (sticky); a left `click` on the item
+  then picked it: the program received `$F820` (menu 0, item 1) at once.
+

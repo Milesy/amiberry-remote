@@ -96,6 +96,7 @@ amiga.pointer()                    # (x, y) on the front screen, in its own pixe
 amiga.move_to(330, 48)
 amiga.click(330, 48)               # left button; click(x, y, "right") for the right one
 amiga.drag(100, 120, 160, 120)     # left button held from the first position to the second
+amiga.drag(300, 100, 290, 89, 360, 70, button="right", pause=0.3)   # through several positions
 ```
 
 Positions are the front screen's own pixels: x 0-639 on a hires screen, 0-319 on a lores one,
@@ -108,8 +109,22 @@ pixel along it.
 
 A position off the screen is refused before the pointer moves. A pointer that stops short is an
 error giving where it got to. A click puts the pointer on the position first; a drag goes there,
-presses the left button, and moves a pixel at a time along the line, so the program sees every
-position in between. Buttons are released whatever happens.
+presses the button (left unless `button="right"`), and moves a pixel at a time along the line, or
+through each further position in turn, so the program sees every position in between. `pause`
+seconds are spent at each position between the first and the last. Buttons are released whatever
+happens.
+
+**Menus.** The window must be the active one, or the right button shows no menu: a program
+started from a Shell leaves the Shell active, so click inside the program's window first (inside
+the window, not just the screen). ClassicWB, on both machines, runs MagicMenu, which changes how
+menus behave (see `NOTES.md`, "Menus with MagicMenu"):
+
+- The menu pops up at the pointer, not from the title bar. It opens with the menu and item last
+  used under the pointer, so the layout depends on what was picked before. Take a `shot` with the
+  menu open to see where things are.
+- Pick with two clicks: `click(x, y, "right")` opens the menu and it stays open; then
+  `click(item_x, item_y)` picks the item. Letting go of the right button at the end of a drag
+  highlighted the item but sent no pick (MENUNULL).
 
 **Keep the PC's mouse off Amiberry's window during a run.** Moving it over the window moves the
 Amiga's pointer too; steering corrects for it, but a click or drag at the wrong moment lands in
@@ -206,6 +221,7 @@ amiberry-remote type 'dir\n'              # \n is Return
 amiberry-remote pointer                   # 330 48
 amiberry-remote click 330 48              # click 330 48 right
 amiberry-remote drag 100 120 160 120
+amiberry-remote drag 300 100 290 89 360 70 right --pause 0.3   # a menu pick
 amiberry-remote shot /tmp/now.png         # 640 x 256 (--raw PATH keeps Amiberry's own)
 amiberry-remote peek '$4' l               # $00200830 (b, w, l, or a count of bytes to dump)
 amiberry-remote poke 0x40000 w 0x4E71
