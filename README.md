@@ -222,6 +222,17 @@ address and length, with `not loaded` for a hunk the program unloaded. A failure
 saying what went wrong to standard error and exits with status 1 (2 for a mistake in the
 command line).
 
+## Claude skill
+
+[skills/amiberry-remote/SKILL.md](skills/amiberry-remote/SKILL.md) tells Claude sessions in any
+Amiga project how to use this tool: which machine is which, checking what's running before
+starting Amiberry, the command line, and how to write check scripts. It is linked into the user's
+skills, so every session has it:
+
+```sh
+ln -s ~/source/amiga/amiberry-remote/skills/amiberry-remote ~/.claude/skills/amiberry-remote
+```
+
 ## Tests
 
 The unit tests run against a fake Amiberry (`tests/fake_amiberry.py`), so Amiberry isn't needed:
