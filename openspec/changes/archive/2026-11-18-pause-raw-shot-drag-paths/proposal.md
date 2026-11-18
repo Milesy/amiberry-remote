@@ -33,8 +33,10 @@ spec, so `amiga-input` no longer says what the tool does. This change brings bot
 ### Modified Capabilities
 - `emulator-session`: pausing and resuming the emulation.
 - `screen-capture`: Amiberry's own screenshot.
-- `amiga-input`: drags with either button, through several positions, with pauses.
-- `command-line`: `pause`, `resume`, `rawshot`, and the wider `drag`.
+- `amiga-input`: drags with either button, through several positions, with pauses (a new
+  requirement beside "Click and drag").
+- `command-line`: `pause`, `resume`, `rawshot`, and the wider `drag`; the long "Sub-commands"
+  requirement split in three (screen and memory, session, input).
 
 ## Impact
 

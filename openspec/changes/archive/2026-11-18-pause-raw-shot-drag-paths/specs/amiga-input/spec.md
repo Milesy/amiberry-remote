@@ -2,12 +2,9 @@
 
 ### Requirement: Click and drag
 The tool SHALL click the left or right mouse button at a screen position (pointer put there first),
-and drag with the left or right button held from a first position through one or more further
-positions, along straight lines, in steps small enough that the program sees the pointer move.
-The button SHALL go down at the first position and up at the last. When asked, the tool SHALL wait
-a given time at each position between the first and the last, so a menu can show its items. Fewer
-than two positions, an x without its y, or a button other than left or right SHALL be an error,
-with nothing sent. It SHALL leave every button released, also when a step fails.
+and drag with the left or right button held from one position to another along a straight line, in
+steps small enough that the program sees the pointer move. It SHALL leave every button released,
+also when a step fails.
 
 #### Scenario: Click a button
 - **WHEN** the left button is clicked at x 330, y 48
@@ -16,6 +13,15 @@ with nothing sent. It SHALL leave every button released, also when a step fails.
 #### Scenario: Drag a marker
 - **WHEN** a drag from x 100, y 120 to x 160, y 120 is asked for
 - **THEN** the button goes down at x 100, the pointer passes through the positions in between, and the button goes up at x 160
+
+## ADDED Requirements
+
+### Requirement: Drag through several positions
+A drag SHALL be able to go on through further positions in turn, along straight lines, the button
+going down at the first position and up at the last. When asked, the tool SHALL wait a given time
+at each position between the first and the last, so a menu can show its items. Fewer than two
+positions, an x without its y, or a button other than left or right SHALL be an error, with
+nothing sent.
 
 #### Scenario: Right-button drag through a menu
 - **WHEN** a right-button drag through x 300, y 100, then x 290, y 89, then x 360, y 70 is asked for, with a pause of 0.3 s
